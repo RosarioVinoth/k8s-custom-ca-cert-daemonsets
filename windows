@@ -1,0 +1,43 @@
+kind: DaemonSet 
+apiVersion: apps/v1
+metadata:
+  labels:
+    app: cert-installer
+  name: cert-installer-daemon
+spec:
+  selector:
+    matchLabels:
+      name: cert-installer
+  template:
+    metadata:
+      labels:
+        name: cert-installer
+    spec:
+      securityContext:
+        windowsOptions:
+          # requires K8s v1.23 or greater
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+      hostNetwork: true
+      containers:
+        - image: mcr.microsoft.com/dotnet/sdk:7.0-windowsservercore-ltsc2019
+          name: windows
+          command:
+            - Powershell
+          args:
+            - New-SelfSignedCertificate
+            - -DnsName
+            - '"www.fabrikam.com", "www.contoso.com"'
+            - -CertStoreLocation
+            - "cert:\\LocalMachine\\My\\"
+          volumeMounts:
+            - name: certsdir
+              mountPath: /mycerts
+      nodeSelector:
+        "kubernetes.io/os": windows
+      volumes:
+        - name: certsdir
+          hostPath:
+            # directory location on host
+            path: /windows
+ 
